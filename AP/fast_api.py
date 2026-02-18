@@ -1,25 +1,29 @@
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-from typing import Optional
 import pandas as pd
 import os
-
 from dotenv import load_dotenv
-load_dotenv()
 
+# =========================
+# LOAD ENV
+# =========================
+
+load_dotenv()
 
 app = FastAPI(title="PDF Access API")
 
 # =========================
-# CONFIGURATION
+# CONFIGURATION (RELATIVE)
 # =========================
 
-PDF_ROOT = Path(r"D:/Shivam/AP")
-DATA_FILE = Path(r"D:\Shivam\AP\excel\Alluri Sitharama Raju\Addateegala\Addateegala.xlsx")
+BASE_DIR = Path(__file__).resolve().parent
 
-API_KEY = os.getenv("API_KEY")  # Set via environment variable
+PDF_ROOT = BASE_DIR / "pdf_out"
+DATA_FILE = BASE_DIR / "excel" / "Addateegala.xlsx"
+
+API_KEY = os.getenv("API_KEY")
 
 # =========================
 # MIDDLEWARE
@@ -38,9 +42,9 @@ app.add_middleware(
 # =========================
 
 if not DATA_FILE.exists():
-    raise Exception("Excel file not found")
+    raise Exception(f"Excel file not found: {DATA_FILE}")
 
-df = pd.read_excel(DATA_FILE)  # ✅ FIXED
+df = pd.read_excel(DATA_FILE)
 
 guid_map = {}
 
@@ -64,11 +68,6 @@ def safe_path(base: Path, *paths: str) -> Path:
         raise HTTPException(status_code=403, detail="Access denied")
     return full_path
 
-
-def verify_api_key(x_api_key: Optional[str]):
-    if x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
 # =========================
 # ROUTES
 # =========================
@@ -80,8 +79,6 @@ def root():
     }
 
 
-from fastapi import Query
-
 @app.get("/pdf")
 def get_pdf_by_guid(
     state: str = Query(...),
@@ -89,21 +86,21 @@ def get_pdf_by_guid(
     api_key: str = Query(...)
 ):
 
-    # 1️⃣ Validate API key
+    # Validate API key
     if api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API Key")
 
-    # 2️⃣ Validate state (example: only AP allowed)
+    # Validate state
     if state.lower() != "andhrapradesh":
         raise HTTPException(status_code=403, detail="Invalid State")
 
-
-    # 3️⃣ Validate GUID
+    # Validate GUID
     if guid not in guid_map:
         raise HTTPException(status_code=404, detail="GUID not found")
 
     record = guid_map[guid]
 
+    # Handle survey number formatting
     safe_survey = record["survey"].replace("/", "-")
     filename = f"{safe_survey}.pdf"
 
@@ -123,4 +120,3 @@ def get_pdf_by_guid(
         media_type="application/pdf",
         filename=filename
     )
-
