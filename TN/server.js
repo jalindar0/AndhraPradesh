@@ -53,15 +53,15 @@ const workbook = XLSX.readFile(DATA_FILE);
 const sheet = workbook.Sheets[workbook.SheetNames[0]];
 const rows = XLSX.utils.sheet_to_json(sheet);
 
-let guidMap = {};
+let ouidMap = {};
 
 rows.forEach(row => {
 
-    const guid = String(row.guid || "").trim();
+    const ouid = String(row.guid || "").trim();
 
-    if (!guid) return;
+    if (!ouid) return;
 
-    guidMap[guid] = {
+    ouidMap[ouid] = {
         district: row.dname,
         taluk: row.taluk_english_name,
         village: row.village_english_name,
@@ -70,7 +70,7 @@ rows.forEach(row => {
 
 });
 
-console.log("GUID loaded:", Object.keys(guidMap).length);
+console.log("OUID loaded:", Object.keys(ouidMap).length);
 
 // ======================
 // ROOT ROUTE
@@ -79,7 +79,7 @@ console.log("GUID loaded:", Object.keys(guidMap).length);
 app.get("/", (req, res) => {
     res.json({
         status: "Tamil Nadu PDF API running",
-        total_guid: Object.keys(guidMap).length
+        total_ouid: Object.keys(ouidMap).length
     });
 });
 
@@ -91,7 +91,7 @@ app.get("/pdf", (req, res) => {
 
     try {
 
-        const { state, guid, api_key } = req.query;
+        const { state, ouid, api_key } = req.query;
 
         if (api_key !== API_KEY) {
             return res.status(401).json({ error: "Invalid API Key" });
@@ -101,11 +101,11 @@ app.get("/pdf", (req, res) => {
             return res.status(403).json({ error: "Invalid State" });
         }
 
-        if (!guidMap[guid]) {
-            return res.status(404).json({ error: "GUID not found" });
+        if (!ouidMap[ouid]) {
+            return res.status(404).json({ error: "OUID not found" });
         }
 
-        const record = guidMap[guid];
+        const record = ouidMap[ouid];
 
         // ===== FIND DISTRICT =====
 
